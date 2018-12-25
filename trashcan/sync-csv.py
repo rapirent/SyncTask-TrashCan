@@ -1,8 +1,8 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 
-import codecs, json,httplib
-import urllib2
+import codecs, json
+from urllib.request import urlopen
 import ast
 
 root = 'http://data.taipei/opendata/datalist/apiAccess?scope=resourceAquire&rid='
@@ -23,44 +23,50 @@ dict = {u'士林區':'97cc923a-e9ee-4adc-8c3d-335567dc15d3'
 
 class TrashCan(object):
     def __init__(self, address, region, road, memo, location):
-    	self.address = address
-    	self.region = region
-    	self.road = road
-    	self.memo = memo
-    	self.location = location
+        self.address = address
+        self.region = region
+        self.road = road
+        self.memo = memo
+        self.location = location
 
 class Location(object):
-	def __init__(self, latitude, longitude):
-		self.latitude = latitude
-		self.longitude = longitude
+    def __init__(self, latitude, longitude):
+        self.latitude = latitude
+        self.longitude = longitude
 
 TrashCans = []
 
-for key, value in dict.iteritems():
+for key, value in dict.items():
 
-	url = root + value
+    url = root + value
 
-	print key
+    print(key)
 
-	response = urllib2.urlopen(url).read().decode('utf8')
+    response = urlopen(url).read().decode('utf8')
 
-	data = json.loads(response)
+    data = json.loads(response)
 
-	items = data["result"]["results"]
+    items = data["result"]["results"]
+    for item in items:
+        print(item)
+        if item[u'緯度'] and item[u'經度']:
+            if item[u'經度'] == '121.566.489':
+                item[u'經度'] = '121.566'
+            locationString=ast.literal_eval('{"__type": "GeoPoint", "longitude":' + str(float(item[u'經度'])) + ',"latitude":' + str(float(item[u'緯度'])) + ' }')
+            if u'備註' in item:
+                memo = item[u'備註']
+            else:
+                memo = '無'
+            t = TrashCan(item[u'段、號及其他註明']
+                ,key
+                ,item[u'路名']
+                ,memo
+                ,locationString)
 
-	for item in items:
-		locationString=ast.literal_eval('{"__type": "GeoPoint", "longitude":' + str(float(item[u'經度'])) + ',"latitude":' + str(float(item[u'緯度'])) + ' }')
-	
-		t = TrashCan(item[u'段、號及其他註明']
-			,key
-			,item[u'路名']
-			,item[u'備註']
-			,locationString)
-
-		jsonStringTruck = json.dumps(t.__dict__, ensure_ascii=False)
-		TrashCans.append(ast.literal_eval(jsonStringTruck))
+            jsonStringTruck = json.dumps(t.__dict__, ensure_ascii=False)
+            TrashCans.append(ast.literal_eval(jsonStringTruck))
 
 json_string = '{"results":' + json.dumps(TrashCans, ensure_ascii=False) + '}'
 
 with codecs.open("Bin.json", "w") as outfile:
-	outfile.write(json_string)
+    outfile.write(json_string)
